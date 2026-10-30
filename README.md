@@ -30,6 +30,7 @@ La base vive en `~/.local/share/monitor-red/red.db` (se cambia con `--db` o la v
 
 | Tecla | Dónde | Acción |
 |---|---|---|
+| `/`, `b` o `Ctrl+F` | | Buscar equipo por código, nombre, IP (o parte), grupo, zona o notas. Sin distinguir mayúsculas ni tildes; varias palabras deben coincidir todas. También encuentra los no operativos. `Enter` vuelve a la tabla, `Esc` borra la búsqueda |
 | `f` | Monitor | Mostrar solo los equipos caídos |
 | `n` | Monitor | Mostrar también los no operativos y los que no tienen IP |
 | `h` | Monitor / Administración | Historial de caídas del equipo seleccionado |

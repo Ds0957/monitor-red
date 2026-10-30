@@ -18,6 +18,8 @@ PRIMER USO
   Cada hoja del Excel se convierte en una zona.
 
 TECLAS
+  / o b    buscar equipo (codigo, nombre, IP o parte de ella, grupo, notas);
+           Enter vuelve a la tabla, Esc borra la busqueda
   f        solo equipos caidos
   n        mostrar tambien los no operativos y los que no tienen IP
   h        historial de caidas del equipo seleccionado

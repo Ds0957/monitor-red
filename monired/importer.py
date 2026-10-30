@@ -51,7 +51,8 @@ class ImportReport:
         return sum(self.zones.values())
 
 
-def _norm(value) -> str:
+def fold_text(value) -> str:
+    """Lowercase, accent-free, single-spaced text for tolerant comparisons."""
     text = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode()
     return " ".join(text.lower().split())
 
@@ -90,7 +91,7 @@ def _find_header(rows) -> tuple[int, dict[str, int]] | None:
     for i, row in enumerate(rows[:10]):
         cols = {}
         for j, cell in enumerate(row):
-            key = HEADERS.get(_norm(cell))
+            key = HEADERS.get(fold_text(cell))
             if key and key not in cols:
                 cols[key] = j
         if "ip" in cols:
@@ -109,7 +110,7 @@ def _read_with_header(zone: ZoneData, rows, cols: dict[str, int], warnings: list
             continue
         sede, ciclo = get(row, "sede"), get(row, "ciclo")
         grp = " / ".join(p for p in (sede, ciclo) if p)
-        estado = _norm(get(row, "estado"))
+        estado = fold_text(get(row, "estado"))
         zone.devices.append(
             DeviceRow(
                 grp=grp,

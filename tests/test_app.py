@@ -42,6 +42,50 @@ async def test_monitor_shows_live_state_and_records_downtime(inv, fake_ping):
         assert column(table, "state")[2] == "NO OPER."
 
 
+async def test_search_devices(inv, fake_ping):
+    salones, oficinas = inv.add_zone("Salones"), inv.add_zone("Oficinas")
+    inv.add_device(salones, grp="Roja", code="R3-2", ip="10.0.0.64")
+    inv.add_device(salones, grp="Azul", code="A1-1", ip="10.0.0.69", monitored=False,
+                   notes="Coordinación Seniors")
+    inv.add_device(oficinas, grp="Principal", code="P-RECTORIA", name="Rector", ip="10.0.5.70")
+
+    app = make_app(inv, fake_ping)
+    async with app.run_test(size=(160, 50)) as pilot:
+        table = app.query_one("#monitor", DataTable)
+        search = app.query_one("#search", Input)
+
+        await pilot.press("slash")
+        assert search.has_focus
+        await pilot.press(*"r3-2")                       # typed, not a shortcut
+        assert column(table, "code") == ["R3-2"]
+
+        search.value = "rector"                          # name, case-insensitive
+        await pilot.pause()
+        assert column(table, "code") == ["P-RECTORIA"]
+
+        search.value = "0.5.70"                          # partial IP
+        await pilot.pause()
+        assert column(table, "code") == ["P-RECTORIA"]
+
+        search.value = "coordinacion"                    # accent-insensitive, finds a not-operational device
+        await pilot.pause()
+        assert column(table, "code") == ["A1-1"]
+        assert column(table, "state") == ["NO OPER."]
+
+        search.value = "salones azul"                    # every word must match
+        await pilot.pause()
+        assert column(table, "code") == ["A1-1"]
+        assert "búsqueda: 1 resultado(s)" in str(app.query_one("#summary").render())
+
+        search.value = "nada-que-coincida"
+        await pilot.pause()
+        assert column(table, "code") == []
+
+        await pilot.press("escape")                      # clears and returns to the table
+        assert search.value == "" and table.has_focus
+        assert column(table, "code") == ["R3-2", "P-RECTORIA"]
+
+
 async def test_import_from_the_ui(inv, fake_ping, tmp_path):
     from openpyxl import Workbook
 

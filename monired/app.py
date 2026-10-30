@@ -16,6 +16,7 @@ from textual.widgets import (
 )
 
 from .db import Device, Inventory
+from .importer import fold_text
 from .pinger import DOWN, PENDING, UP, Monitor
 
 ALL_ZONES = -1
@@ -216,7 +217,8 @@ class MonitorApp(App):
     TITLE = "Monitor de red"
     CSS = """
     #filters { height: auto; padding: 0 1; }
-    #filters Select { width: 40; }
+    #filters Select { width: 30; }
+    #search { width: 40; }
     #summary { padding: 1 2; width: 1fr; }
     #admin { height: 1fr; }
     #zones-pane { width: 38; border: round $primary; }
@@ -236,6 +238,7 @@ class MonitorApp(App):
     """
     BINDINGS = [
         Binding("q", "quit", "Salir"),
+        Binding("slash,ctrl+f,b", "search", "Buscar"),
         Binding("f", "toggle_down_only", "Solo caídos"),
         Binding("n", "toggle_all", "Ver no operativos"),
         Binding("h", "history", "Historial"),
@@ -253,6 +256,7 @@ class MonitorApp(App):
         self.zone_filter = ALL_ZONES
         self.down_only = False
         self.show_unmonitored = False
+        self.search_terms: list[str] = []
         self._devices: list[Device] = []
         self._monitor_rows: list[int] = []
 
@@ -265,6 +269,7 @@ class MonitorApp(App):
                 with Horizontal(id="filters"):
                     yield Select([("Todas las zonas", ALL_ZONES)], value=ALL_ZONES, allow_blank=False,
                                  id="zone-filter")
+                    yield Input(placeholder="Buscar: código, nombre, IP, grupo, notas…", id="search")
                     yield Static("", id="summary")
                 yield DataTable(id="monitor", cursor_type="row", zebra_stripes=True)
             with TabPane("Administración", id="tab-admin"):
@@ -319,13 +324,44 @@ class MonitorApp(App):
         self.zone_filter = event.value
         self._rebuild_monitor()
 
+    # --- search ---
+
+    def action_search(self) -> None:
+        self.query_one("#tabs", TabbedContent).active = "tab-monitor"
+        self.query_one("#search", Input).focus()
+
+    @on(Input.Changed, "#search")
+    def _search_changed(self, event: Input.Changed) -> None:
+        self.search_terms = fold_text(event.value).split()
+        self._rebuild_monitor()
+
+    @on(Input.Submitted, "#search")
+    def _search_submitted(self) -> None:
+        self.query_one("#monitor", DataTable).focus()
+
+    def on_key(self, event) -> None:
+        # Esc in the search box clears it and goes back to the table.
+        search = self.query_one("#search", Input)
+        if event.key == "escape" and search.has_focus:
+            search.value = ""
+            self.query_one("#monitor", DataTable).focus()
+            event.stop()
+
+    def _matches_search(self, d: Device) -> bool:
+        """Every word must appear in some field; accents and case are ignored."""
+        haystack = fold_text(" ".join((d.zone_name, d.grp, d.code, d.name, d.ip or "", d.notes)))
+        return all(term in haystack for term in self.search_terms)
+
     def _visible_devices(self) -> list[Device]:
         out = []
         for d in self._devices:
             if self.zone_filter != ALL_ZONES and d.zone_id != self.zone_filter:
                 continue
+            if self.search_terms and not self._matches_search(d):
+                continue
             watched = d.monitored and d.ip
-            if not watched and not self.show_unmonitored:
+            # A search also finds not-operational devices: hiding them would look like "not found".
+            if not watched and not self.show_unmonitored and not self.search_terms:
                 continue
             if self.down_only and (not watched or self.monitor.status(d.id).state != DOWN):
                 continue
@@ -387,6 +423,8 @@ class MonitorApp(App):
         states = [self.monitor.status(d.id).state for d in watched]
         up, down, pending = states.count(UP), states.count(DOWN), states.count(PENDING)
         flags = []
+        if self.search_terms:
+            flags.append(f"búsqueda: {len(self._monitor_rows)} resultado(s)")
         if self.down_only:
             flags.append("solo caídos")
         if self.show_unmonitored:
