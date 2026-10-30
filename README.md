@@ -6,6 +6,12 @@ Inventario de IPs por zona y ping en tiempo real, todo en la terminal.
 - **Administración:** crear, renombrar y eliminar zonas; agregar, editar y eliminar equipos (IP, código, grupo, notas, operativo sí/no).
 - **Importación:** carga el Excel de inventario; cada hoja se convierte en una zona.
 
+## Descarga (Windows)
+
+Última versión: **[MonitorRed-windows.zip](https://github.com/Ds0957/monitor-red/releases/latest/download/MonitorRed-windows.zip)** · [todas las versiones](https://github.com/Ds0957/monitor-red/releases)
+
+Descomprimir y hacer doble clic en `instalar.bat` (o abrir `MonitorRed.exe` directamente). No necesita Python ni permisos de administrador. El repositorio es privado: para descargar hay que iniciar sesión en GitHub con una cuenta que tenga acceso.
+
 ## Instalación
 
 ```bash
