@@ -81,3 +81,39 @@ def test_cli_import(tmp_path, workbook, capsys):
 
     assert main(["--db", str(db), "importar", str(tmp_path / "nope.xlsx")]) == 1
     assert "No existe el archivo" in capsys.readouterr().err
+
+
+def test_replace_with_clashing_sheet_names_keeps_the_database(inv, workbook, tmp_path):
+    import_workbook(inv, workbook)
+    before = [(d.zone_name, d.code, d.name, d.ip) for d in inv.devices()]
+
+    wb = Workbook()
+    wb.active.title = "Zona A"
+    wb.active.append(["Código", "IP"])
+    wb.active.append(["A-1", "10.0.0.1"])
+    other = wb.create_sheet("ZONA A ")
+    other.append(["Código", "IP"])
+    other.append(["A-2", "10.0.0.2"])
+    clashing = tmp_path / "clash.xlsx"
+    wb.save(clashing)
+
+    with pytest.raises(ValueError, match="'Zona A' y 'ZONA A'"):
+        import_workbook(inv, clashing, replace=True)
+    assert [(d.zone_name, d.code, d.name, d.ip) for d in inv.devices()] == before
+
+
+def test_cli_reports_clashing_sheet_names(tmp_path, capsys):
+    wb = Workbook()
+    wb.active.title = "Zona A"
+    wb.active.append(["Código", "IP"])
+    wb.active.append(["A-1", "10.0.0.1"])
+    other = wb.create_sheet("zona a ")
+    other.append(["Código", "IP"])
+    other.append(["A-2", "10.0.0.2"])
+    path = tmp_path / "clash.xlsx"
+    wb.save(path)
+
+    assert main(["--db", str(tmp_path / "red.db"), "importar", str(path)]) == 1
+    err = capsys.readouterr().err
+    assert "Las hojas 'Zona A' y 'zona a' son la misma zona" in err
+    assert "--reemplazar" not in err

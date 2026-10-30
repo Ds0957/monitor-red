@@ -579,15 +579,18 @@ class MonitorApp(App):
         self.push_screen(ImportForm(), self._import_chosen)
 
     def _import_chosen(self, choice: tuple[str, bool] | None) -> None:
-        from .importer import import_workbook
+        from .importer import DatabaseNotEmpty, import_workbook
 
         if choice is None:
             return
         path, replace = choice
         try:
             report = import_workbook(self.inv, path, replace=replace)
-        except ValueError as exc:
+        except DatabaseNotEmpty as exc:
             self.notify(f"{exc} En esta pantalla: activa 'Reemplazar todo'.", severity="error", timeout=10)
+            return
+        except ValueError as exc:
+            self.notify(str(exc), severity="error", timeout=10)
             return
         except Exception as exc:  # unreadable or non-xlsx file
             self.notify(f"No se pudo leer el archivo: {exc}", severity="error", timeout=10)

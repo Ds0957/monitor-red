@@ -51,6 +51,10 @@ class ImportReport:
         return sum(self.zones.values())
 
 
+class DatabaseNotEmpty(ValueError):
+    """The database already has data and the import was not asked to replace it."""
+
+
 def fold_text(value) -> str:
     """Lowercase, accent-free, single-spaced text for tolerant comparisons."""
     text = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode()
@@ -144,10 +148,25 @@ def _ip_or_warn(raw, zone: str, who: str, warnings: list[str]) -> str | None:
     return None
 
 
+def _check_zone_names(zones: list[ZoneData]) -> None:
+    """Sheet names are trimmed, so 'Zona A' and 'ZONA A ' would become the same zone."""
+    seen: dict[str, str] = {}
+    for zone in zones:
+        if not zone.name:
+            raise ValueError("Hay una hoja con equipos cuyo nombre está en blanco; ponle nombre en el Excel.")
+        key = zone.name.lower()
+        if key in seen:
+            raise ValueError(f"Las hojas {seen[key]!r} y {zone.name!r} son la misma zona; "
+                             "cambia el nombre de una en el Excel.")
+        seen[key] = zone.name
+
+
 def import_workbook(inv: Inventory, path: str | Path, replace: bool = False) -> ImportReport:
     if not inv.is_empty() and not replace:
-        raise ValueError("La base ya tiene datos. Usa --reemplazar para borrarla e importar de nuevo.")
+        raise DatabaseNotEmpty("La base ya tiene datos. Usa --reemplazar para borrarla e importar de nuevo.")
     zones, warnings = read_workbook(path)
+    # Reject what add_zone would reject before clearing, so a bad file never half-replaces the base.
+    _check_zone_names(zones)
     report = ImportReport(warnings=warnings)
     if replace:
         inv.clear()
