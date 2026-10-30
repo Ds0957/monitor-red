@@ -1,0 +1,36 @@
+MONITOR DE RED - Windows
+========================
+
+Inventario de IPs por zona y ping en tiempo real, en una ventana de terminal.
+No necesita Python ni permisos de administrador.
+
+OPCION A: usarlo sin instalar
+  Doble clic en MonitorRed.exe.
+
+OPCION B: instalarlo (accesos directos en Escritorio y menu Inicio)
+  Doble clic en instalar.bat.
+  Para importar el Excel en el mismo paso, desde PowerShell:
+    .\instalar.ps1 -Excel "C:\ruta\Organizacion de Red.xlsx"
+
+PRIMER USO
+  Si la base esta vacia, pulsa la tecla i dentro del programa y pega la ruta
+  del Excel (en el Explorador: clic derecho sobre el archivo > Copiar como ruta).
+  Cada hoja del Excel se convierte en una zona.
+
+TECLAS
+  f        solo equipos caidos
+  n        mostrar tambien los no operativos y los que no tienen IP
+  h        historial de caidas del equipo seleccionado
+  a / e / d  agregar / editar / eliminar (zona o equipo, en Administracion)
+  i        importar Excel
+  Tab      cambiar entre listas;  clic en las pestanas Monitor / Administracion
+  q        salir
+
+DESDE LA LINEA DE COMANDOS
+  MonitorRed.exe importar archivo.xlsx [--reemplazar]
+  MonitorRed.exe monitor --intervalo 0.5 --caido-tras 3
+
+DATOS
+  La base se guarda en %LOCALAPPDATA%\MonitorRed\red.db (cada usuario de
+  Windows tiene la suya). Desinstalar la conserva; para borrarla tambien:
+    .\desinstalar.ps1 -BorrarDatos
